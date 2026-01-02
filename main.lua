@@ -1,30 +1,106 @@
--- =====================================
--- FONDI MM2 SCRIPT
--- =====================================
+--==================================================
+-- FONDI MM2 | XENO
+-- FULL ESP FIXED VERSION
+--==================================================
 
+-- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- ================= SETTINGS =================
-local Settings = {
-    ESP = true,
-    MurdererOnly = false,
-    Tracers = true,
-    AimAssist = false,
-    AimFOV = 120
+--==================================================
+-- KEY SYSTEM (1 TIME)
+--==================================================
+
+local VALID_KEYS = {
+    "FONDI-MM2-FOREVER-9X7Q",
 }
 
--- ================= ROLE =================
+local function hasKey()
+    return LocalPlayer:GetAttribute("FONDI_KEY") ~= nil
+end
+
+local function isValidKey(key)
+    for _,k in pairs(VALID_KEYS) do
+        if k == key then return true end
+    end
+    return false
+end
+
+local function saveKey(key)
+    LocalPlayer:SetAttribute("FONDI_KEY", key)
+end
+
+local function KeyUI(callback)
+    if hasKey() then callback() return end
+
+    local gui = Instance.new("ScreenGui", game.CoreGui)
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.fromScale(0.3,0.22)
+    frame.Position = UDim2.fromScale(0.35,0.4)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    frame.Active = true
+    frame.Draggable = true
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.fromScale(1,0.3)
+    title.BackgroundTransparency = 1
+    title.Text = "ENTER KEY"
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.TextColor3 = Color3.new(1,1,1)
+
+    local box = Instance.new("TextBox", frame)
+    box.Size = UDim2.fromScale(0.85,0.25)
+    box.Position = UDim2.fromScale(0.075,0.35)
+    box.PlaceholderText = "FONDI-XXXX-XXXX"
+    box.Font = Enum.Font.Gotham
+    box.TextScaled = true
+    box.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    box.TextColor3 = Color3.new(1,1,1)
+
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.fromScale(0.85,0.22)
+    btn.Position = UDim2.fromScale(0.075,0.65)
+    btn.Text = "UNLOCK"
+    btn.Font = Enum.Font.GothamBold
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.new(1,1,1)
+
+    btn.MouseButton1Click:Connect(function()
+        if isValidKey(box.Text) then
+            saveKey(box.Text)
+            gui:Destroy()
+            callback()
+        else
+            box.Text = ""
+            box.PlaceholderText = "INVALID KEY"
+        end
+    end)
+end
+
+--==================================================
+-- SETTINGS
+--==================================================
+
+local Settings = {
+    ESP = true,
+    Boxes = true,
+    Names = true,
+    Tracers = true
+}
+
+--==================================================
+-- ROLE DETECT (ALWAYS)
+--==================================================
+
 local function getRole(p)
-    local c = p.Character
-    if not c then return "Innocent" end
-    if c:FindFirstChild("Knife") or p.Backpack:FindFirstChild("Knife") then
+    if p.Backpack:FindFirstChild("Knife") or (p.Character and p.Character:FindFirstChild("Knife")) then
         return "Murderer"
     end
-    if c:FindFirstChild("Gun") or p.Backpack:FindFirstChild("Gun") then
+    if p.Backpack:FindFirstChild("Gun") or (p.Character and p.Character:FindFirstChild("Gun")) then
         return "Sheriff"
     end
     return "Innocent"
@@ -40,116 +116,88 @@ local function roleColor(role)
     end
 end
 
--- ================= ESP =================
+--==================================================
+-- ESP SYSTEM (FIXED)
+--==================================================
+
 local ESP = {}
 
-local function createESP(player)
-    if player == LocalPlayer then return end
+local function createESP(p)
+    if p == LocalPlayer then return end
 
     local box = Drawing.new("Square")
     box.Thickness = 2
     box.Filled = false
     box.Visible = false
 
-    local text = Drawing.new("Text")
-    text.Size = 13
-    text.Center = true
-    text.Outline = true
-    text.Visible = false
+    local name = Drawing.new("Text")
+    name.Size = 13
+    name.Center = true
+    name.Outline = true
+    name.Visible = false
 
     local tracer = Drawing.new("Line")
     tracer.Thickness = 1
     tracer.Visible = false
 
-    ESP[player] = {Box=box, Text=text, Tracer=tracer}
+    ESP[p] = {Box=box, Name=name, Tracer=tracer}
 end
 
-local function removeESP(player)
-    if ESP[player] then
-        for _,v in pairs(ESP[player]) do
-            v:Remove()
-        end
-        ESP[player] = nil
+local function removeESP(p)
+    if ESP[p] then
+        for _,v in pairs(ESP[p]) do v:Remove() end
+        ESP[p] = nil
     end
 end
 
--- ================= AIM =================
-local function getClosestMurderer()
-    local closest, dist = nil, Settings.AimFOV
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and getRole(p) == "Murderer" then
-            local c = p.Character
-            local hrp = c and c:FindFirstChild("HumanoidRootPart")
-            local hum = c and c:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                local pos, on = Camera:WorldToViewportPoint(hrp.Position)
-                if on then
-                    local d = (Vector2.new(pos.X,pos.Y) - UIS:GetMouseLocation()).Magnitude
-                    if d < dist then
-                        dist = d
-                        closest = hrp
-                    end
-                end
-            end
-        end
-    end
-    return closest
-end
-
--- ================= UPDATE =================
 RunService.RenderStepped:Connect(function()
-    if Settings.AimAssist then
-        local target = getClosestMurderer()
-        if target then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
-        end
-    end
-
     for p,e in pairs(ESP) do
         local c = p.Character
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
         local hum = c and c:FindFirstChildOfClass("Humanoid")
 
         if Settings.ESP and hrp and hum and hum.Health > 0 then
-            local role = getRole(p)
-            if Settings.MurdererOnly and role ~= "Murderer" then
-                e.Box.Visible=false
-                e.Text.Visible=false
-                e.Tracer.Visible=false
-            else
-                local pos,on = Camera:WorldToViewportPoint(hrp.Position)
-                if on then
-                    local color = roleColor(role)
-                    local scale = 2000 / pos.Z
-                    local size = Vector2.new(scale, scale*1.5)
+            local pos,on = Camera:WorldToViewportPoint(hrp.Position)
+            if on then
+                local role = getRole(p)
+                local color = roleColor(role)
+                local scale = 2000 / pos.Z
+                local size = Vector2.new(scale, scale*1.5)
 
+                if Settings.Boxes then
                     e.Box.Size = size
-                    e.Box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                    e.Box.Position = Vector2.new(pos.X-size.X/2, pos.Y-size.Y/2)
                     e.Box.Color = color
                     e.Box.Visible = true
-
-                    e.Text.Text = p.Name.." ["..role.."]"
-                    e.Text.Position = Vector2.new(pos.X, pos.Y - size.Y/2 - 14)
-                    e.Text.Color = color
-                    e.Text.Visible = true
-
-                    if Settings.Tracers then
-                        e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                        e.Tracer.To = Vector2.new(pos.X, pos.Y)
-                        e.Tracer.Color = color
-                        e.Tracer.Visible = true
-                    else
-                        e.Tracer.Visible = false
-                    end
                 else
-                    e.Box.Visible=false
-                    e.Text.Visible=false
-                    e.Tracer.Visible=false
+                    e.Box.Visible = false
                 end
+
+                if Settings.Names then
+                    e.Name.Text = p.Name.." ["..role.."]"
+                    e.Name.Position = Vector2.new(pos.X, pos.Y-size.Y/2-14)
+                    e.Name.Color = color
+                    e.Name.Visible = true
+                else
+                    e.Name.Visible = false
+                end
+
+                if Settings.Tracers then
+                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    e.Tracer.To = Vector2.new(pos.X, pos.Y)
+                    e.Tracer.Color = color
+                    e.Tracer.Visible = true
+                else
+                    e.Tracer.Visible = false
+                end
+            else
+                e.Box.Visible=false
+                e.Name.Visible=false
+                e.Tracer.Visible=false
             end
         else
             e.Box.Visible=false
-            e.Text.Visible=false
+            e.Name.Visible=false
             e.Tracer.Visible=false
         end
     end
@@ -159,75 +207,48 @@ for _,p in ipairs(Players:GetPlayers()) do createESP(p) end
 Players.PlayerAdded:Connect(createESP)
 Players.PlayerRemoving:Connect(removeESP)
 
--- ================= GUI =================
-local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "FONDI_MM2_GUI"
+--==================================================
+-- GUI
+--==================================================
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromScale(0.24,0.45)
-frame.Position = UDim2.fromScale(0.38,0.32)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-frame.Active = true
-frame.Draggable = true
+local function MainGUI()
+    local gui = Instance.new("ScreenGui", game.CoreGui)
 
--- HEADER (ФИКСИРОВАННЫЙ)
-local HEADER_HEIGHT = 0.12
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.fromScale(0.24,0.35)
+    frame.Position = UDim2.fromScale(0.38,0.33)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    frame.Active = true
+    frame.Draggable = true
 
-local header = Instance.new("Frame", frame)
-header.Size = UDim2.fromScale(1, HEADER_HEIGHT)
-header.BackgroundTransparency = 1
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.fromScale(1,0.2)
+    title.BackgroundTransparency = 1
+    title.Text = "MM2 | FONDI"
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.TextColor3 = Color3.new(1,1,1)
 
-local title = Instance.new("TextLabel", header)
-title.Size = UDim2.fromScale(0.85,1)
-title.BackgroundTransparency = 1
-title.Text = "MM2 | FONDI"
-title.Font = Enum.Font.GothamBold
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextScaled = true
-title.TextXAlignment = Enum.TextXAlignment.Left
+    local function btn(txt,y,cb)
+        local b = Instance.new("TextButton", frame)
+        b.Size = UDim2.fromScale(0.8,0.18)
+        b.Position = UDim2.fromScale(0.1,y)
+        b.Text = txt
+        b.Font = Enum.Font.Gotham
+        b.TextScaled = true
+        b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+        b.TextColor3 = Color3.new(1,1,1)
+        b.MouseButton1Click:Connect(cb)
+    end
 
-local arrow = Instance.new("TextButton", header)
-arrow.Size = UDim2.fromScale(0.15,1)
-arrow.Position = UDim2.fromScale(0.85,0)
-arrow.BackgroundTransparency = 1
-arrow.Text = "▼"
-arrow.Font = Enum.Font.GothamBold
-arrow.TextScaled = true
-arrow.TextColor3 = Color3.fromRGB(200,200,200)
-
--- CONTENT
-local content = Instance.new("Frame", frame)
-content.Position = UDim2.fromScale(0, HEADER_HEIGHT)
-content.Size = UDim2.fromScale(1, 1 - HEADER_HEIGHT)
-content.BackgroundTransparency = 1
-
-local function makeButton(text, y, callback)
-    local b = Instance.new("TextButton", content)
-    b.Position = UDim2.fromScale(0.1,y)
-    b.Size = UDim2.fromScale(0.8,0.15)
-    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    b.Text = text
-    b.Font = Enum.Font.Gotham
-    b.TextScaled = true
-    b.TextColor3 = Color3.fromRGB(255,255,255)
-    b.MouseButton1Click:Connect(callback)
+    btn("ESP",0.25,function() Settings.ESP = not Settings.ESP end)
+    btn("BOXES",0.45,function() Settings.Boxes = not Settings.Boxes end)
+    btn("NAMES",0.65,function() Settings.Names = not Settings.Names end)
+    btn("TRACERS",0.85,function() Settings.Tracers = not Settings.Tracers end)
 end
 
-makeButton("ESP",0.05,function() Settings.ESP = not Settings.ESP end)
-makeButton("MURDERER ONLY",0.25,function() Settings.MurdererOnly = not Settings.MurdererOnly end)
-makeButton("TRACERS",0.45,function() Settings.Tracers = not Settings.Tracers end)
-makeButton("AIM ASSIST",0.65,function() Settings.AimAssist = not Settings.AimAssist end)
+--==================================================
+-- START
+--==================================================
 
--- ================= COLLAPSE FIX =================
-local collapsed = false
-local FULL_SIZE = frame.Size
-local COLLAPSED_SIZE = UDim2.fromScale(0.24, HEADER_HEIGHT)
-
-arrow.MouseButton1Click:Connect(function()
-    collapsed = not collapsed
-    content.Visible = not collapsed
-    frame.Size = collapsed and COLLAPSED_SIZE or FULL_SIZE
-    arrow.Text = collapsed and "▲" or "▼"
-end)
-
-print("FONDI MM2 loaded")
+KeyUI(MainGUI)
