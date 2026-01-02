@@ -1,23 +1,6 @@
 --==================================================
 -- FONDI MM2 | FULL WORKING SCRIPT
 --==================================================
--- ===== VERSION CHECK =====
-local VERSION = "2.1" -- МЕНЯЕШЬ ПРИ КАЖДОМ ОБНОВЛЕНИИ
-local VERSION_ATTR = "FONDI_MM2_VERSION"
-
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-
-local UpdatedThisRun = false
-
-pcall(function()
-    local last = LocalPlayer:GetAttribute(VERSION_ATTR)
-    if last ~= VERSION then
-        UpdatedThisRun = true
-        LocalPlayer:SetAttribute(VERSION_ATTR, VERSION)
-    end
-end)
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -215,7 +198,7 @@ local function CreateGUI()
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.Text = "FONDI MM2 Script V2.1"
+    title.Text = "FONDI MM2"
     title.TextScaled = true
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
@@ -329,44 +312,5 @@ else
             box.Text = ""
             box.PlaceholderText = "WRONG KEY"
         end
-    end)
-end
--- ===== UPDATE INDICATOR =====
-if UpdatedThisRun then
-    local updateIcon = Instance.new("TextLabel", gui)
-    updateIcon.Size = UDim2.fromScale(0.035, 0.06)
-    updateIcon.Position = UDim2.fromScale(0.01, 0.5)
-    updateIcon.BackgroundTransparency = 1
-    updateIcon.Text = "🔃"
-    updateIcon.TextScaled = true
-    updateIcon.Font = Enum.Font.GothamBold
-    updateIcon.TextTransparency = 1
-    updateIcon.TextColor3 = Color3.fromRGB(0, 255, 180)
-
-    -- Плавное появление
-    TweenService:Create(
-        updateIcon,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-        {TextTransparency = 0}
-    ):Play()
-
-    -- Вращение
-    task.spawn(function()
-        while updateIcon.Parent do
-            updateIcon.Rotation = updateIcon.Rotation + 4
-            task.wait(0.03)
-        end
-    end)
-
-    -- Убрать через 3 секунды
-    task.delay(3, function()
-        TweenService:Create(
-            updateIcon,
-            TweenInfo.new(0.4),
-            {TextTransparency = 1}
-        ):Play()
-        task.delay(0.4, function()
-            updateIcon:Destroy()
-        end)
     end)
 end
