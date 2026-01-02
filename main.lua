@@ -1,15 +1,84 @@
 -- =====================================
--- FONDI MM2 SCRIPT | STABLE XENO
+-- FONDI MM2 SCRIPT | XENO STABLE FULL
 -- =====================================
 
 -- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
--- ================= ROLE =================
+-- =====================================
+-- KEY SYSTEM
+-- =====================================
+local VALID_KEY = "FONDI-MM2-FOREVER-9X7Q"
+
+local function hasKey()
+    return LP:GetAttribute("FONDI_MM2_KEY") == VALID_KEY
+end
+
+local function saveKey()
+    pcall(function()
+        LP:SetAttribute("FONDI_MM2_KEY", VALID_KEY)
+    end)
+end
+
+local function KeyUI(onSuccess)
+    if hasKey() then
+        onSuccess()
+        return
+    end
+
+    local gui = Instance.new("ScreenGui", game.CoreGui)
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.fromScale(0.32,0.22)
+    frame.Position = UDim2.fromScale(0.5,0.5)
+    frame.AnchorPoint = Vector2.new(0.5,0.5)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    frame.Active = true
+    frame.Draggable = true
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.fromScale(1,0.3)
+    title.BackgroundTransparency = 1
+    title.Text = "FONDI MM2 | KEY"
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.TextColor3 = Color3.new(1,1,1)
+
+    local box = Instance.new("TextBox", frame)
+    box.Size = UDim2.fromScale(0.85,0.25)
+    box.Position = UDim2.fromScale(0.075,0.35)
+    box.PlaceholderText = "Enter Key"
+    box.TextScaled = true
+    box.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    box.TextColor3 = Color3.new(1,1,1)
+
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.fromScale(0.85,0.22)
+    btn.Position = UDim2.fromScale(0.075,0.68)
+    btn.Text = "UNLOCK"
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.new(1,1,1)
+
+    btn.MouseButton1Click:Connect(function()
+        if box.Text == VALID_KEY then
+            saveKey()
+            gui:Destroy()
+            onSuccess()
+        else
+            box.Text = ""
+            box.PlaceholderText = "INVALID KEY"
+        end
+    end)
+end
+
+-- =====================================
+-- ROLE DETECTION
+-- =====================================
 local function getRole(p)
     if p.Backpack:FindFirstChild("Knife") or (p.Character and p.Character:FindFirstChild("Knife")) then
         return "Murderer"
@@ -20,7 +89,9 @@ local function getRole(p)
     return "Innocent"
 end
 
--- ================= ESP =================
+-- =====================================
+-- ESP (WH)
+-- =====================================
 local ESP = {}
 
 local function addESP(p)
@@ -68,26 +139,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ================= AUTO COIN =================
-local AutoCoin = false
-
-task.spawn(function()
-    while task.wait(0.6) do
-        if AutoCoin and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-            for _,v in pairs(workspace:GetChildren()) do
-                if v:IsA("Model") and v.Name:lower():find("coin") then
-                    local part = v:FindFirstChildWhichIsA("BasePart")
-                    if part then
-                        LP.Character.HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0,2,0)
-                        task.wait(0.08)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ================= FLY + NOCLIP =================
+-- =====================================
+-- FLY + NOCLIP
+-- =====================================
 local Fly = false
 local BV, BG
 
@@ -126,40 +180,123 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ================= GUI =================
-local gui = Instance.new("ScreenGui", game.CoreGui)
-local f = Instance.new("Frame", gui)
-f.Size = UDim2.fromScale(0.25,0.45)
-f.Position = UDim2.fromScale(0.38,0.3)
-f.BackgroundColor3 = Color3.fromRGB(20,20,20)
-f.Active = true
-f.Draggable = true
+-- =====================================
+-- MAIN GUI + TELEPORT
+-- =====================================
+local function CreateMainGUI()
+    local gui = Instance.new("ScreenGui", game.CoreGui)
 
-local title = Instance.new("TextLabel", f)
-title.Size = UDim2.fromScale(1,0.15)
-title.BackgroundTransparency = 1
-title.Text = "FONDI MM2 | STABLE"
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-title.TextColor3 = Color3.new(1,1,1)
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.fromScale(0.25,0.6)
+    frame.Position = UDim2.fromScale(0.38,0.25)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    frame.Active = true
+    frame.Draggable = true
 
-local function button(text, y, cb)
-    local b = Instance.new("TextButton", f)
-    b.Size = UDim2.fromScale(0.8,0.18)
-    b.Position = UDim2.fromScale(0.1,y)
-    b.Text = text
-    b.TextScaled = true
-    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    b.TextColor3 = Color3.new(1,1,1)
-    b.MouseButton1Click:Connect(cb)
+    local header = Instance.new("Frame", frame)
+    header.Size = UDim2.fromScale(1,0.12)
+    header.BackgroundTransparency = 1
+
+    local title = Instance.new("TextLabel", header)
+    title.Size = UDim2.fromScale(0.85,1)
+    title.BackgroundTransparency = 1
+    title.Text = "MM2 | FONDI"
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.TextColor3 = Color3.new(1,1,1)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    local arrow = Instance.new("TextButton", header)
+    arrow.Size = UDim2.fromScale(0.15,1)
+    arrow.Position = UDim2.fromScale(0.85,0)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = "▼"
+    arrow.Font = Enum.Font.GothamBold
+    arrow.TextScaled = true
+    arrow.TextColor3 = Color3.new(1,1,1)
+
+    local content = Instance.new("Frame", frame)
+    content.Position = UDim2.fromScale(0,0.12)
+    content.Size = UDim2.fromScale(1,0.88)
+    content.BackgroundTransparency = 1
+
+    local function btn(text,y,cb)
+        local b = Instance.new("TextButton", content)
+        b.Size = UDim2.fromScale(0.8,0.12)
+        b.Position = UDim2.fromScale(0.1,y)
+        b.Text = text
+        b.TextScaled = true
+        b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        b.TextColor3 = Color3.new(1,1,1)
+        b.MouseButton1Click:Connect(cb)
+    end
+
+    btn("FLY / NOCLIP",0.1,function()
+        if Fly then stopFly() else startFly() end
+    end)
+
+    btn("TELEPORT",0.28,function()
+        local tp = Instance.new("Frame", gui)
+        tp.Size = UDim2.fromScale(0.25,0.4)
+        tp.Position = UDim2.fromScale(0.37,0.3)
+        tp.BackgroundColor3 = Color3.fromRGB(20,20,20)
+        tp.Active = true
+        tp.Draggable = true
+
+        local close = Instance.new("TextButton", tp)
+        close.Size = UDim2.fromScale(0.15,0.12)
+        close.Position = UDim2.fromScale(0.85,0)
+        close.Text = "X"
+        close.TextScaled = true
+        close.BackgroundColor3 = Color3.fromRGB(200,50,50)
+        close.TextColor3 = Color3.new(1,1,1)
+        close.MouseButton1Click:Connect(function()
+            tp:Destroy()
+        end)
+
+        local list = Instance.new("ScrollingFrame", tp)
+        list.Position = UDim2.fromScale(0,0.12)
+        list.Size = UDim2.fromScale(1,0.88)
+        list.CanvasSize = UDim2.new(0,0,0,0)
+        list.ScrollBarThickness = 6
+
+        local y = 0
+        for _,p in pairs(Players:GetPlayers()) do
+            if p ~= LP then
+                local b = Instance.new("TextButton", list)
+                b.Size = UDim2.fromScale(0.9,0.14)
+                b.Position = UDim2.fromScale(0.05,y)
+                b.Text = p.Name
+                b.TextScaled = true
+                b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+                b.TextColor3 = Color3.new(1,1,1)
+                b.MouseButton1Click:Connect(function()
+                    local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                    local my = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp and my then
+                        my.CFrame = hrp.CFrame + Vector3.new(0,3,0)
+                    end
+                end)
+                y += 0.16
+            end
+        end
+        list.CanvasSize = UDim2.new(0,0,y,0)
+    end)
+
+    local collapsed = false
+    arrow.MouseButton1Click:Connect(function()
+        collapsed = not collapsed
+        arrow.Text = collapsed and "▲" or "▼"
+        TweenService:Create(
+            frame,
+            TweenInfo.new(0.25),
+            {Size = collapsed and UDim2.fromScale(0.25,0.12) or UDim2.fromScale(0.25,0.6)}
+        ):Play()
+        content.Visible = not collapsed
+    end)
 end
 
-button("AUTO COIN FARM", 0.25, function()
-    AutoCoin = not AutoCoin
-end)
-
-button("FLY / NOCLIP", 0.48, function()
-    if Fly then stopFly() else startFly() end
-end)
-
-print("FONDI MM2 STABLE loaded")
+-- =====================================
+-- START
+-- =====================================
+KeyUI(CreateMainGUI)
