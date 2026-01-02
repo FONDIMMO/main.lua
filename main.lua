@@ -14,6 +14,7 @@ local LP = Players.LocalPlayer
 -- KEY SYSTEM
 -- =====================================
 local VALID_KEY = "FONDI-MM2-FOREVER-9X7Q"
+local VALID_KEY = "FONDI-MM2-FOREVER-6H1W"
 
 local function hasKey()
     return LP:GetAttribute("FONDI_MM2_KEY") == VALID_KEY
