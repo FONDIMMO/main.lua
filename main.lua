@@ -1,6 +1,6 @@
---=====================================
+--==================================================
 -- FONDI MM2 | FULL WORKING SCRIPT
---=====================================
+--==================================================
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -8,12 +8,11 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
-
 local LP = Players.LocalPlayer
 
---=====================================
+--==================================================
 -- KEY SYSTEM
---=====================================
+--==================================================
 local KEY = "FONDI-MM2-FOREVER"
 local ATTR = "FONDI_MM2_KEY"
 
@@ -25,20 +24,19 @@ local function SaveKey()
     LP:SetAttribute(ATTR, KEY)
 end
 
---=====================================
+--==================================================
 -- SETTINGS
---=====================================
+--==================================================
 local Settings = {
     ESP = true,
     Tracers = true,
     Fly = false,
-    Noclip = false,
-    GuiTransparency = 0
+    Noclip = false
 }
 
---=====================================
+--==================================================
 -- ROLE CHECK
---=====================================
+--==================================================
 local function GetRole(p)
     if p.Backpack:FindFirstChild("Knife") or (p.Character and p.Character:FindFirstChild("Knife")) then
         return "Murderer"
@@ -49,9 +47,9 @@ local function GetRole(p)
     return "Innocent"
 end
 
---=====================================
+--==================================================
 -- ESP
---=====================================
+--==================================================
 local ESP = {}
 
 local function AddESP(p)
@@ -117,17 +115,53 @@ RunService.RenderStepped:Connect(function()
                 end
             end
         else
-            e.Box.Visible=false e.Text.Visible=false e.Tracer.Visible=false
+            e.Box.Visible=false
+            e.Text.Visible=false
+            e.Tracer.Visible=false
         end
     end
 end)
 
---=====================================
--- FLY + NOCLIP
---=====================================
+--==================================================
+-- FLY
+--==================================================
+local FlyBV, FlyBG
+local FlySpeed = 50
+
+RunService.RenderStepped:Connect(function()
+    if Settings.Fly and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LP.Character.HumanoidRootPart
+
+        if not FlyBV then
+            FlyBV = Instance.new("BodyVelocity", hrp)
+            FlyBV.MaxForce = Vector3.new(1e9,1e9,1e9)
+            FlyBG = Instance.new("BodyGyro", hrp)
+            FlyBG.MaxTorque = Vector3.new(1e9,1e9,1e9)
+        end
+
+        FlyBG.CFrame = Camera.CFrame
+
+        local move = Vector3.zero
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move += Camera.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= Camera.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= Camera.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move += Camera.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+
+        FlyBV.Velocity = move * FlySpeed
+    else
+        if FlyBV then FlyBV:Destroy() FlyBV=nil end
+        if FlyBG then FlyBG:Destroy() FlyBG=nil end
+    end
+end)
+
+--==================================================
+-- NOCLIP
+--==================================================
 RunService.Stepped:Connect(function()
     if Settings.Noclip and LP.Character then
-        for _,v in pairs(LP.Character:GetDescendants()) do
+        for _,v in ipairs(LP.Character:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.CanCollide = false
             end
@@ -135,9 +169,19 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---=====================================
+--==================================================
+-- TELEPORT FUNCTION
+--==================================================
+local function TeleportTo(player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        LP.Character:WaitForChild("HumanoidRootPart").CFrame =
+            player.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+    end
+end
+
+--==================================================
 -- GUI
---=====================================
+--==================================================
 local function CreateGUI()
     local gui = Instance.new("ScreenGui", game.CoreGui)
 
@@ -154,7 +198,7 @@ local function CreateGUI()
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.Text = "FONDI MM2 Script V1.9"
+    title.Text = "FONDI MM2 Script V2.0"
     title.TextScaled = true
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
@@ -171,7 +215,7 @@ local function CreateGUI()
     local content = Instance.new("ScrollingFrame", frame)
     content.Position = UDim2.fromScale(0,0.12)
     content.Size = UDim2.fromScale(1,0.88)
-    content.CanvasSize = UDim2.new(0,0,1.4,0)
+    content.CanvasSize = UDim2.new(0,0,1.6,0)
     content.ScrollBarThickness = 6
     content.BackgroundTransparency = 1
 
@@ -224,10 +268,7 @@ local function CreateGUI()
                 b.BackgroundColor3 = Color3.fromRGB(35,35,35)
                 b.TextColor3 = Color3.new(1,1,1)
                 b.MouseButton1Click:Connect(function()
-                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        LP.Character.HumanoidRootPart.CFrame =
-                            p.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
-                    end
+                    TeleportTo(p)
                 end)
                 y += 0.12
             end
@@ -247,9 +288,9 @@ local function CreateGUI()
     end)
 end
 
---=====================================
+--==================================================
 -- START
---=====================================
+--==================================================
 if HasKey() then
     CreateGUI()
 else
