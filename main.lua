@@ -198,7 +198,7 @@ local function CreateGUI()
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.Text = "FONDI MM2"
+    title.Text = "FONDI MM2 V2.2"
     title.TextScaled = true
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
