@@ -1,26 +1,28 @@
 --=====================================
--- FONDI MM2 | FIXED GUI VERSION
+-- FONDI MM2 | FULL WORKING SCRIPT
 --=====================================
 
 -- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
+
+local LP = Players.LocalPlayer
 
 --=====================================
 -- KEY SYSTEM
 --=====================================
-local VALID_KEY = "FONDI-MM2-FOREVER"
-local KEY_ATTR = "FONDI_MM2_KEY"
+local KEY = "FONDI-MM2-FOREVER"
+local ATTR = "FONDI_MM2_KEY"
 
 local function HasKey()
-    return LocalPlayer:GetAttribute(KEY_ATTR) == VALID_KEY
+    return LP:GetAttribute(ATTR) == KEY
 end
 
 local function SaveKey()
-    LocalPlayer:SetAttribute(KEY_ATTR, VALID_KEY)
+    LP:SetAttribute(ATTR, KEY)
 end
 
 --=====================================
@@ -28,18 +30,20 @@ end
 --=====================================
 local Settings = {
     ESP = true,
-    Tracers = true
+    Tracers = true,
+    Fly = false,
+    Noclip = false,
+    GuiTransparency = 0
 }
 
 --=====================================
--- ROLE
+-- ROLE CHECK
 --=====================================
 local function GetRole(p)
-    if not p.Character then return "Innocent" end
-    if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then
+    if p.Backpack:FindFirstChild("Knife") or (p.Character and p.Character:FindFirstChild("Knife")) then
         return "Murderer"
     end
-    if p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then
+    if p.Backpack:FindFirstChild("Gun") or (p.Character and p.Character:FindFirstChild("Gun")) then
         return "Sheriff"
     end
     return "Innocent"
@@ -50,9 +54,8 @@ end
 --=====================================
 local ESP = {}
 
-local function CreateESP(p)
-    if p == LocalPlayer then return end
-
+local function AddESP(p)
+    if p == LP then return end
     local box = Drawing.new("Square")
     box.Thickness = 2
     box.Filled = false
@@ -75,8 +78,8 @@ local function RemoveESP(p)
     end
 end
 
-for _,p in pairs(Players:GetPlayers()) do CreateESP(p) end
-Players.PlayerAdded:Connect(CreateESP)
+for _,p in ipairs(Players:GetPlayers()) do AddESP(p) end
+Players.PlayerAdded:Connect(AddESP)
 Players.PlayerRemoving:Connect(RemoveESP)
 
 RunService.RenderStepped:Connect(function()
@@ -84,9 +87,8 @@ RunService.RenderStepped:Connect(function()
         local c = p.Character
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
         local hum = c and c:FindFirstChildOfClass("Humanoid")
-
         if Settings.ESP and hrp and hum and hum.Health > 0 then
-            local pos, on = Camera:WorldToViewportPoint(hrp.Position)
+            local pos,on = Camera:WorldToViewportPoint(hrp.Position)
             if on then
                 local role = GetRole(p)
                 local color =
@@ -106,7 +108,7 @@ RunService.RenderStepped:Connect(function()
                 e.Text.Visible = true
 
                 if Settings.Tracers then
-                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
                     e.Tracer.To = Vector2.new(pos.X,pos.Y)
                     e.Tracer.Color = color
                     e.Tracer.Visible = true
@@ -115,9 +117,20 @@ RunService.RenderStepped:Connect(function()
                 end
             end
         else
-            e.Box.Visible=false
-            e.Text.Visible=false
-            e.Tracer.Visible=false
+            e.Box.Visible=false e.Text.Visible=false e.Tracer.Visible=false
+        end
+    end
+end)
+
+--=====================================
+-- FLY + NOCLIP
+--=====================================
+RunService.Stepped:Connect(function()
+    if Settings.Noclip and LP.Character then
+        for _,v in pairs(LP.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
         end
     end
 end)
@@ -127,26 +140,23 @@ end)
 --=====================================
 local function CreateGUI()
     local gui = Instance.new("ScreenGui", game.CoreGui)
-    gui.Name = "FONDI_MM2_GUI"
 
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.fromScale(0.25,0.45)
-    frame.Position = UDim2.fromScale(0.375,0.3)
+    frame.Size = UDim2.fromScale(0.28,0.5)
+    frame.Position = UDim2.fromScale(0.36,0.25)
     frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     frame.Active = true
     frame.Draggable = true
 
-    -- HEADER
     local header = Instance.new("Frame", frame)
-    header.Size = UDim2.fromScale(1,0.15)
+    header.Size = UDim2.fromScale(1,0.12)
     header.BackgroundColor3 = Color3.fromRGB(25,25,25)
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.BackgroundTransparency = 1
-    title.Text = "FONDI MM2"
-    title.Font = Enum.Font.GothamBold
+    title.Text = "FONDI MM2 Script V1.9"
     title.TextScaled = true
+    title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
     title.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -154,41 +164,84 @@ local function CreateGUI()
     arrow.Size = UDim2.fromScale(0.15,1)
     arrow.Position = UDim2.fromScale(0.85,0)
     arrow.Text = "▼"
-    arrow.Font = Enum.Font.GothamBold
     arrow.TextScaled = true
     arrow.BackgroundTransparency = 1
     arrow.TextColor3 = Color3.new(1,1,1)
 
-    -- CONTENT
-    local content = Instance.new("Frame", frame)
-    content.Position = UDim2.fromScale(0,0.15)
-    content.Size = UDim2.fromScale(1,0.85)
+    local content = Instance.new("ScrollingFrame", frame)
+    content.Position = UDim2.fromScale(0,0.12)
+    content.Size = UDim2.fromScale(1,0.88)
+    content.CanvasSize = UDim2.new(0,0,1.4,0)
+    content.ScrollBarThickness = 6
     content.BackgroundTransparency = 1
 
     local function Button(text,y,cb)
         local b = Instance.new("TextButton", content)
-        b.Size = UDim2.fromScale(0.85,0.15)
+        b.Size = UDim2.fromScale(0.85,0.1)
         b.Position = UDim2.fromScale(0.075,y)
         b.Text = text
-        b.Font = Enum.Font.Gotham
         b.TextScaled = true
         b.BackgroundColor3 = Color3.fromRGB(35,35,35)
         b.TextColor3 = Color3.new(1,1,1)
         b.MouseButton1Click:Connect(cb)
     end
 
-    Button("ESP",0.1,function() Settings.ESP = not Settings.ESP end)
-    Button("TRACERS",0.3,function() Settings.Tracers = not Settings.Tracers end)
+    Button("ESP",0.05,function() Settings.ESP = not Settings.ESP end)
+    Button("TRACERS",0.17,function() Settings.Tracers = not Settings.Tracers end)
+    Button("FLY",0.29,function() Settings.Fly = not Settings.Fly end)
+    Button("NOCLIP",0.41,function() Settings.Noclip = not Settings.Noclip end)
 
-    -- COLLAPSE
+    Button("TELEPORT",0.53,function()
+        local tp = Instance.new("Frame", gui)
+        tp.Size = UDim2.fromScale(0.22,0.35)
+        tp.Position = UDim2.fromScale(0.4,0.3)
+        tp.BackgroundColor3 = Color3.fromRGB(25,25,25)
+        tp.Active = true
+        tp.Draggable = true
+
+        local close = Instance.new("TextButton", tp)
+        close.Size = UDim2.fromScale(0.15,0.12)
+        close.Position = UDim2.fromScale(0.85,0)
+        close.Text = "X"
+        close.TextScaled = true
+        close.BackgroundColor3 = Color3.fromRGB(150,50,50)
+        close.MouseButton1Click:Connect(function() tp:Destroy() end)
+
+        local list = Instance.new("ScrollingFrame", tp)
+        list.Size = UDim2.fromScale(1,0.88)
+        list.Position = UDim2.fromScale(0,0.12)
+        list.CanvasSize = UDim2.new(0,0,1,0)
+        list.ScrollBarThickness = 6
+
+        local y = 0
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= LP then
+                local b = Instance.new("TextButton", list)
+                b.Size = UDim2.fromScale(0.9,0.1)
+                b.Position = UDim2.fromScale(0.05,y)
+                b.Text = p.Name
+                b.TextScaled = true
+                b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+                b.TextColor3 = Color3.new(1,1,1)
+                b.MouseButton1Click:Connect(function()
+                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        LP.Character.HumanoidRootPart.CFrame =
+                            p.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                    end
+                end)
+                y += 0.12
+            end
+        end
+    end)
+
     local collapsed = false
     arrow.MouseButton1Click:Connect(function()
         collapsed = not collapsed
         arrow.Text = collapsed and "▲" or "▼"
         TweenService:Create(
             frame,
-            TweenInfo.new(0.3,Enum.EasingStyle.Quad),
-            {Size = collapsed and UDim2.fromScale(0.25,0.15) or UDim2.fromScale(0.25,0.45)}
+            TweenInfo.new(0.3),
+            {Size = collapsed and UDim2.fromScale(0.28,0.12) or UDim2.fromScale(0.28,0.5)}
         ):Play()
         content.Visible = not collapsed
     end)
@@ -201,22 +254,22 @@ if HasKey() then
     CreateGUI()
 else
     local g = Instance.new("ScreenGui", game.CoreGui)
-    local b = Instance.new("TextBox", g)
-    b.Size = UDim2.fromScale(0.3,0.08)
-    b.Position = UDim2.fromScale(0.35,0.45)
-    b.PlaceholderText = "ENTER KEY"
-    b.TextScaled = true
-    b.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    b.TextColor3 = Color3.new(1,1,1)
+    local box = Instance.new("TextBox", g)
+    box.Size = UDim2.fromScale(0.3,0.08)
+    box.Position = UDim2.fromScale(0.35,0.45)
+    box.PlaceholderText = "ENTER KEY"
+    box.TextScaled = true
+    box.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    box.TextColor3 = Color3.new(1,1,1)
 
-    b.FocusLost:Connect(function()
-        if b.Text == VALID_KEY then
+    box.FocusLost:Connect(function()
+        if box.Text == KEY then
             SaveKey()
             g:Destroy()
             CreateGUI()
         else
-            b.Text = ""
-            b.PlaceholderText = "WRONG KEY"
+            box.Text = ""
+            box.PlaceholderText = "WRONG KEY"
         end
     end)
 end
