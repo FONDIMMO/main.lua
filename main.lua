@@ -2,7 +2,7 @@
 -- FONDI MM2 | FULL WORKING SCRIPT
 --==================================================
 -- ===== VERSION CHECK =====
-local VERSION = "1.1" -- МЕНЯЕШЬ ПРИ КАЖДОМ ОБНОВЛЕНИИ
+local VERSION = "2.1" -- МЕНЯЕШЬ ПРИ КАЖДОМ ОБНОВЛЕНИИ
 local VERSION_ATTR = "FONDI_MM2_VERSION"
 
 local Players = game:GetService("Players")
@@ -215,7 +215,7 @@ local function CreateGUI()
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.Text = "FONDI MM2 Script V2.0"
+    title.Text = "FONDI MM2 Script V2.1"
     title.TextScaled = true
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
