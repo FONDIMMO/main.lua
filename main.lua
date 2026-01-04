@@ -1,5 +1,5 @@
 --==================================================
--- FONDI MM2 | FULL WORKING SCRIPT
+-- FONDI MM2 | FULL SCRIPT + CHROMA SKIN
 --==================================================
 
 -- SERVICES
@@ -31,7 +31,17 @@ local Settings = {
     ESP = true,
     Tracers = true,
     Fly = false,
-    Noclip = false
+    Noclip = false,
+    Chroma = false
+}
+
+--==================================================
+-- SKIN SETTINGS
+--==================================================
+local SkinSettings = {
+    Knife = nil,
+    Gun = nil,
+    AutoApply = true
 }
 
 --==================================================
@@ -131,16 +141,13 @@ local FlySpeed = 50
 RunService.RenderStepped:Connect(function()
     if Settings.Fly and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = LP.Character.HumanoidRootPart
-
         if not FlyBV then
             FlyBV = Instance.new("BodyVelocity", hrp)
             FlyBV.MaxForce = Vector3.new(1e9,1e9,1e9)
             FlyBG = Instance.new("BodyGyro", hrp)
             FlyBG.MaxTorque = Vector3.new(1e9,1e9,1e9)
         end
-
         FlyBG.CFrame = Camera.CFrame
-
         local move = Vector3.zero
         if UIS:IsKeyDown(Enum.KeyCode.W) then move += Camera.CFrame.LookVector end
         if UIS:IsKeyDown(Enum.KeyCode.S) then move -= Camera.CFrame.LookVector end
@@ -148,7 +155,6 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.D) then move += Camera.CFrame.RightVector end
         if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
-
         FlyBV.Velocity = move * FlySpeed
     else
         if FlyBV then FlyBV:Destroy() FlyBV=nil end
@@ -170,7 +176,7 @@ RunService.Stepped:Connect(function()
 end)
 
 --==================================================
--- TELEPORT FUNCTION
+-- TELEPORT
 --==================================================
 local function TeleportTo(player)
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -178,6 +184,31 @@ local function TeleportTo(player)
             player.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
     end
 end
+
+--==================================================
+-- CHROMA EFFECT
+--==================================================
+local hue = 0
+RunService.RenderStepped:Connect(function()
+    if not Settings.Chroma then return end
+    hue = (hue + 1) % 360
+    local color = Color3.fromHSV(hue/360,1,1)
+
+    local function apply(tool)
+        for _,v in ipairs(tool:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Color = color
+            end
+        end
+    end
+
+    if LP.Character then
+        local knife = LP.Character:FindFirstChild("Knife")
+        local gun = LP.Character:FindFirstChild("Gun")
+        if knife then apply(knife) end
+        if gun then apply(gun) end
+    end
+end)
 
 --==================================================
 -- GUI
@@ -198,7 +229,7 @@ local function CreateGUI()
 
     local title = Instance.new("TextLabel", header)
     title.Size = UDim2.fromScale(0.85,1)
-    title.Text = "FONDI MM2 V2.2"
+    title.Text = "FONDI MM2 | CHROMA"
     title.TextScaled = true
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.new(1,1,1)
@@ -215,7 +246,7 @@ local function CreateGUI()
     local content = Instance.new("ScrollingFrame", frame)
     content.Position = UDim2.fromScale(0,0.12)
     content.Size = UDim2.fromScale(1,0.88)
-    content.CanvasSize = UDim2.new(0,0,1.6,0)
+    content.CanvasSize = UDim2.new(0,0,1.4,0)
     content.ScrollBarThickness = 6
     content.BackgroundTransparency = 1
 
@@ -234,56 +265,15 @@ local function CreateGUI()
     Button("TRACERS",0.17,function() Settings.Tracers = not Settings.Tracers end)
     Button("FLY",0.29,function() Settings.Fly = not Settings.Fly end)
     Button("NOCLIP",0.41,function() Settings.Noclip = not Settings.Noclip end)
-
-    Button("TELEPORT",0.53,function()
-        local tp = Instance.new("Frame", gui)
-        tp.Size = UDim2.fromScale(0.22,0.35)
-        tp.Position = UDim2.fromScale(0.4,0.3)
-        tp.BackgroundColor3 = Color3.fromRGB(25,25,25)
-        tp.Active = true
-        tp.Draggable = true
-
-        local close = Instance.new("TextButton", tp)
-        close.Size = UDim2.fromScale(0.15,0.12)
-        close.Position = UDim2.fromScale(0.85,0)
-        close.Text = "X"
-        close.TextScaled = true
-        close.BackgroundColor3 = Color3.fromRGB(150,50,50)
-        close.MouseButton1Click:Connect(function() tp:Destroy() end)
-
-        local list = Instance.new("ScrollingFrame", tp)
-        list.Size = UDim2.fromScale(1,0.88)
-        list.Position = UDim2.fromScale(0,0.12)
-        list.CanvasSize = UDim2.new(0,0,1,0)
-        list.ScrollBarThickness = 6
-
-        local y = 0
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p ~= LP then
-                local b = Instance.new("TextButton", list)
-                b.Size = UDim2.fromScale(0.9,0.1)
-                b.Position = UDim2.fromScale(0.05,y)
-                b.Text = p.Name
-                b.TextScaled = true
-                b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-                b.TextColor3 = Color3.new(1,1,1)
-                b.MouseButton1Click:Connect(function()
-                    TeleportTo(p)
-                end)
-                y += 0.12
-            end
-        end
-    end)
+    Button("CHROMA",0.53,function() Settings.Chroma = not Settings.Chroma end)
 
     local collapsed = false
     arrow.MouseButton1Click:Connect(function()
         collapsed = not collapsed
         arrow.Text = collapsed and "▲" or "▼"
-        TweenService:Create(
-            frame,
-            TweenInfo.new(0.3),
-            {Size = collapsed and UDim2.fromScale(0.28,0.12) or UDim2.fromScale(0.28,0.5)}
-        ):Play()
+        TweenService:Create(frame,TweenInfo.new(0.3),{
+            Size = collapsed and UDim2.fromScale(0.28,0.12) or UDim2.fromScale(0.28,0.5)
+        }):Play()
         content.Visible = not collapsed
     end)
 end
