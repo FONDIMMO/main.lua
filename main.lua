@@ -1,5 +1,5 @@
 --==================================================
--- FONDI MM2 | HUNT ASSIST UPDATE
+-- FONDI MM2 | FIXED HUNT ASSIST
 --==================================================
 
 -- SERVICES
@@ -82,6 +82,8 @@ Players.PlayerAdded:Connect(AddESP)
 Players.PlayerRemoving:Connect(RemoveESP)
 
 RunService.RenderStepped:Connect(function()
+    if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
+
     for p,e in pairs(ESP) do
         local c = p.Character
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
@@ -102,20 +104,27 @@ RunService.RenderStepped:Connect(function()
                 e.Box.Color = color
                 e.Box.Visible = true
 
-                local dist = math.floor((LP.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
+                local dist = math.floor(
+                    (LP.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                )
+
                 e.Text.Text = p.Name.." ["..role.."] ("..dist.."m)"
                 e.Text.Position = Vector2.new(pos.X,pos.Y-size.Y/2-14)
                 e.Text.Color = color
                 e.Text.Visible = true
 
                 if Settings.Tracers then
-                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
+                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                     e.Tracer.To = Vector2.new(pos.X,pos.Y)
                     e.Tracer.Color = color
                     e.Tracer.Visible = true
                 else
                     e.Tracer.Visible = false
                 end
+            else
+                e.Box.Visible=false
+                e.Text.Visible=false
+                e.Tracer.Visible=false
             end
         else
             e.Box.Visible=false
@@ -126,17 +135,67 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==================================================
+-- FLY (FIXED)
+--==================================================
+local FlyBV, FlyBG
+local FlySpeed = 60
+
+RunService.RenderStepped:Connect(function()
+    if Settings.Fly and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LP.Character.HumanoidRootPart
+
+        if not FlyBV then
+            FlyBV = Instance.new("BodyVelocity")
+            FlyBV.MaxForce = Vector3.new(1e9,1e9,1e9)
+            FlyBV.Parent = hrp
+
+            FlyBG = Instance.new("BodyGyro")
+            FlyBG.MaxTorque = Vector3.new(1e9,1e9,1e9)
+            FlyBG.Parent = hrp
+        end
+
+        FlyBG.CFrame = Camera.CFrame
+
+        local move = Vector3.zero
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move += Camera.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= Camera.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= Camera.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move += Camera.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+
+        FlyBV.Velocity = move * FlySpeed
+    else
+        if FlyBV then FlyBV:Destroy() FlyBV=nil end
+        if FlyBG then FlyBG:Destroy() FlyBG=nil end
+    end
+end)
+
+--==================================================
+-- NOCLIP (FIXED)
+--==================================================
+RunService.Stepped:Connect(function()
+    if Settings.Noclip and LP.Character then
+        for _,v in ipairs(LP.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
+
+--==================================================
 -- TELEPORT
 --==================================================
 local function TeleportTo(player)
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character:WaitForChild("HumanoidRootPart").CFrame =
+        LP.Character.HumanoidRootPart.CFrame =
             player.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
     end
 end
 
 --==================================================
--- HUNT ASSIST
+-- HUNT ASSIST (FIXED)
 --==================================================
 local lastTP = 0
 local TP_COOLDOWN = 0.6
@@ -181,31 +240,15 @@ local function CreateGUI()
     local gui = Instance.new("ScreenGui", game.CoreGui)
 
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.fromScale(0.28,0.55)
-    frame.Position = UDim2.fromScale(0.36,0.22)
+    frame.Size = UDim2.fromScale(0.28,0.6)
+    frame.Position = UDim2.fromScale(0.36,0.2)
     frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
     frame.Active = true
     frame.Draggable = true
 
-    local header = Instance.new("Frame", frame)
-    header.Size = UDim2.fromScale(1,0.12)
-    header.BackgroundColor3 = Color3.fromRGB(25,25,25)
-
-    local title = Instance.new("TextLabel", header)
-    title.Size = UDim2.fromScale(1,1)
-    title.Text = "FONDI MM2 | HUNT"
-    title.TextScaled = true
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.new(1,1,1)
-
-    local content = Instance.new("Frame", frame)
-    content.Position = UDim2.fromScale(0,0.12)
-    content.Size = UDim2.fromScale(1,0.88)
-    content.BackgroundTransparency = 1
-
     local function Button(text,y,cb)
-        local b = Instance.new("TextButton", content)
-        b.Size = UDim2.fromScale(0.85,0.1)
+        local b = Instance.new("TextButton", frame)
+        b.Size = UDim2.fromScale(0.85,0.08)
         b.Position = UDim2.fromScale(0.075,y)
         b.Text = text
         b.TextScaled = true
@@ -215,14 +258,10 @@ local function CreateGUI()
     end
 
     Button("ESP",0.05,function() Settings.ESP = not Settings.ESP end)
-    Button("TRACERS",0.17,function() Settings.Tracers = not Settings.Tracers end)
-    Button("FLY",0.29,function() Settings.Fly = not Settings.Fly end)
-    Button("NOCLIP",0.41,function() Settings.Noclip = not Settings.Noclip end)
-
-    -- 🔥 HUNT BUTTON
-    Button("HUNT TP (NEAREST)",0.55,function()
-        HuntTeleport()
-    end)
+    Button("TRACERS",0.15,function() Settings.Tracers = not Settings.Tracers end)
+    Button("FLY",0.25,function() Settings.Fly = not Settings.Fly end)
+    Button("NOCLIP",0.35,function() Settings.Noclip = not Settings.Noclip end)
+    Button("HUNT TP (NEAREST)",0.45,function() HuntTeleport() end)
 end
 
 --==================================================
