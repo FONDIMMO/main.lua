@@ -1,5 +1,5 @@
 --==================================================
--- FONDI MM2 V2 | PREMIUM EDITION
+-- FONDI MM2 V3 | ELITE EDITION
 --==================================================
 
 local Players = game:GetService("Players")
@@ -25,7 +25,12 @@ local Settings = {
     Tracers = true,
     Fly = false,
     Noclip = false,
-    FlySpeed = 60
+    FlySpeed = 60,
+    SilentAim = false,
+    KillAura = false,
+    AutoCollect = false,
+    AutoGrab = false,
+    GodMode = false
 }
 
 -- Загрузка настроек
@@ -99,7 +104,7 @@ local function Notify(title, text, color)
 end
 
 --==================================================
--- ROLE LOGIC & GAME EVENTS
+-- ROLE LOGIC & ELITE FUNCTIONS
 --==================================================
 local function GetRole(p)
     if not p or not p:FindFirstChild("Backpack") then return "Innocent" end
@@ -108,6 +113,72 @@ local function GetRole(p)
     return "Innocent"
 end
 
+-- 1. SILENT AIM (Для Шерифа)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    if method == "FireServer" and self.Name == "ShootGun" and Settings.SilentAim then
+        for _, v in pairs(Players:GetPlayers()) do
+            if GetRole(v) == "Murderer" and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                args[1] = v.Character.HumanoidRootPart.Position
+                return oldNamecall(self, unpack(args))
+            end
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+
+-- 2. KILL AURA, AUTO-GRAB, AUTO-COLLECT, GOD MODE
+RunService.Stepped:Connect(function()
+    -- God Mode (Удаление Kill-пакета)
+    if Settings.GodMode and LP.Character then
+        pcall(function()
+            if LP.Character:FindFirstChild("KillScript") then LP.Character.KillScript:Destroy() end
+        end)
+    end
+
+    -- Kill Aura
+    if Settings.KillAura and GetRole(LP) == "Murderer" then
+        local knife = LP.Character:FindFirstChild("Knife") or LP.Backpack:FindFirstChild("Knife")
+        if knife and knife:IsA("Tool") then
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (LP.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < 15 then
+                        firetouchinterest(v.Character.HumanoidRootPart, knife.Handle, 0)
+                        firetouchinterest(v.Character.HumanoidRootPart, knife.Handle, 1)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Auto Grab Gun
+    if Settings.AutoGrab then
+        local gun = workspace:FindFirstChild("GunDrop")
+        if gun and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+            LP.Character.HumanoidRootPart.CFrame = gun.CFrame
+        end
+    end
+
+    -- Auto Collect Coins
+    if Settings.AutoCollect and LP.Character then
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "CoinContainer" then
+                for _, coin in pairs(v:GetChildren()) do
+                    if coin:IsA("BasePart") then
+                        coin.CFrame = LP.Character.HumanoidRootPart.CFrame
+                    end
+                end
+            end
+        end
+    end
+end)
+
+--==================================================
+-- СТАРЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
+--==================================================
 local KnownMurderer = nil
 local KnownSheriff = nil
 
@@ -115,7 +186,6 @@ RunService.Heartbeat:Connect(function()
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LP then continue end
         local role = GetRole(p)
-        
         if role == "Murderer" and KnownMurderer ~= p then
             KnownMurderer = p
             Notify("MURDERER FOUND", p.DisplayName .. " is the Murderer!", Color3.fromRGB(255, 50, 50))
@@ -124,16 +194,12 @@ RunService.Heartbeat:Connect(function()
             Notify("SHERIFF FOUND", p.DisplayName .. " has the Gun!", Color3.fromRGB(50, 150, 255))
         end
     end
-    
     if KnownSheriff and (not KnownSheriff.Character or not KnownSheriff.Character:FindFirstChild("Humanoid") or KnownSheriff.Character.Humanoid.Health <= 0) then
         Notify("SHERIFF DIED", "The gun is dropped!", Color3.fromRGB(255, 200, 50))
         KnownSheriff = nil
     end
 end)
 
---==================================================
--- СТАРЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
---==================================================
 local ESP = {}
 local function AddESP(p)
     if p == LP then return end
@@ -227,115 +293,98 @@ local function HuntTeleport()
 end
 
 --==================================================
--- NEW MODERN GUI
+-- NEW MODERN GUI V3
 --==================================================
 local function CreateModernGUI()
     local MainGui = Instance.new("ScreenGui", game.CoreGui)
     local MainFrame = Instance.new("Frame", MainGui)
-    MainFrame.Size = UDim2.new(0, 450, 0, 300)
-    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
+    MainFrame.Size = UDim2.new(0, 480, 0, 320)
+    MainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
     MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
+    MainFrame.Active = true; MainFrame.Draggable = true
     
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke", MainFrame)
-    Stroke.Color = Color3.fromRGB(60, 60, 70)
-    Stroke.Thickness = 2
+    Stroke.Color = Color3.fromRGB(60, 60, 70); Stroke.Thickness = 2
 
-    -- Sidebar
     local Sidebar = Instance.new("Frame", MainFrame)
-    Sidebar.Size = UDim2.new(0, 120, 1, 0)
+    Sidebar.Size = UDim2.new(0, 130, 1, 0)
     Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     Sidebar.BorderSizePixel = 0
     Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
-    local Title = Instance.new("TextLabel", Sidebar)
-    Title.Size = UDim2.new(1, 0, 0, 50)
-    Title.Text = "FONDI MM2"
-    Title.Font = Enum.Font.GothamBold
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.TextSize = 18
-    Title.BackgroundTransparency = 1
-
     local Container = Instance.new("Frame", MainFrame)
-    Container.Position = UDim2.new(0, 130, 0, 10)
-    Container.Size = UDim2.new(1, -140, 1, -20)
+    Container.Position = UDim2.new(0, 140, 0, 10)
+    Container.Size = UDim2.new(1, -150, 1, -20)
     Container.BackgroundTransparency = 1
 
     local Tabs = {
         Visuals = Instance.new("Frame", Container),
         Combat = Instance.new("Frame", Container),
-        Movement = Instance.new("Frame", Container)
+        Movement = Instance.new("Frame", Container),
+        Farm = Instance.new("Frame", Container)
     }
 
     for _, f in pairs(Tabs) do 
-        f.Size = UDim2.new(1, 0, 1, 0)
-        f.Visible = false 
-        f.BackgroundTransparency = 1
-        local layout = Instance.new("UIListLayout", f)
-        layout.Padding = UDim.new(0, 8)
+        f.Size = UDim2.new(1, 0, 1, 0); f.Visible = false; f.BackgroundTransparency = 1
+        local layout = Instance.new("UIListLayout", f); layout.Padding = UDim.new(0, 8)
     end
     Tabs.Visuals.Visible = true
 
     local function CreateTabButton(name, y, frame)
         local b = Instance.new("TextButton", Sidebar)
-        b.Size = UDim2.new(0.9, 0, 0, 35)
-        b.Position = UDim2.new(0.05, 0, 0, y)
-        b.Text = name
-        b.Font = Enum.Font.GothamSemibold
-        b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-        b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-        b.BorderSizePixel = 0
-        Instance.new("UICorner", b)
-        
+        b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = UDim2.new(0.05, 0, 0, y)
+        b.Text = name; b.Font = Enum.Font.GothamSemibold; b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+        b.BackgroundColor3 = Color3.fromRGB(40, 40, 45); b.BorderSizePixel = 0; Instance.new("UICorner", b)
         b.MouseButton1Click:Connect(function()
             for _, f in pairs(Tabs) do f.Visible = false end
             frame.Visible = true
         end)
     end
 
-    CreateTabButton("VISUALS", 60, Tabs.Visuals)
-    CreateTabButton("COMBAT", 100, Tabs.Combat)
-    CreateTabButton("MOVE", 140, Tabs.Movement)
+    CreateTabButton("VISUALS", 50, Tabs.Visuals)
+    CreateTabButton("COMBAT", 90, Tabs.Combat)
+    CreateTabButton("MOVE", 130, Tabs.Movement)
+    CreateTabButton("FARM", 170, Tabs.Farm)
 
-    local function Toggle(name, parent, start, cb)
+    local function Toggle(name, parent, var, cb)
         local btn = Instance.new("TextButton", parent)
-        btn.Size = UDim2.new(1, 0, 0, 40)
-        btn.BackgroundColor3 = start and Color3.fromRGB(50, 150, 100) or Color3.fromRGB(45, 45, 50)
-        btn.Text = name
-        btn.Font = Enum.Font.GothamSemibold
-        btn.TextColor3 = Color3.new(1, 1, 1)
-        btn.BorderSizePixel = 0
-        Instance.new("UICorner", btn)
+        btn.Size = UDim2.new(1, 0, 0, 35)
+        btn.BackgroundColor3 = Settings[var] and Color3.fromRGB(50, 150, 100) or Color3.fromRGB(45, 45, 50)
+        btn.Text = name; btn.Font = Enum.Font.GothamSemibold; btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.BorderSizePixel = 0; Instance.new("UICorner", btn)
 
         btn.MouseButton1Click:Connect(function()
-            local state = cb()
-            btn.BackgroundColor3 = state and Color3.fromRGB(50, 150, 100) or Color3.fromRGB(45, 45, 50)
+            Settings[var] = not Settings[var]
+            if cb then cb(Settings[var]) end
+            btn.BackgroundColor3 = Settings[var] and Color3.fromRGB(50, 150, 100) or Color3.fromRGB(45, 45, 50)
             SaveSettings()
         end)
     end
 
-    -- Visuals Tab
-    Toggle("ESP BOX", Tabs.Visuals, Settings.ESP, function() Settings.ESP = not Settings.ESP return Settings.ESP end)
-    Toggle("TRACERS", Tabs.Visuals, Settings.Tracers, function() Settings.Tracers = not Settings.Tracers return Settings.Tracers end)
+    -- Visuals
+    Toggle("ESP BOX", Tabs.Visuals, "ESP")
+    Toggle("TRACERS", Tabs.Visuals, "Tracers")
     
-    -- Combat Tab
-    Toggle("HUNT TP (NEAREST)", Tabs.Combat, false, function() HuntTeleport() return false end)
+    -- Combat
+    Toggle("SILENT AIM", Tabs.Combat, "SilentAim")
+    Toggle("KILL AURA", Tabs.Combat, "KillAura")
+    Toggle("GOD MODE", Tabs.Combat, "GodMode")
+    Toggle("HUNT TP (NEAREST)", Tabs.Combat, "tp_none", function() HuntTeleport() end)
 
-    -- Movement Tab
-    Toggle("FLY", Tabs.Movement, Settings.Fly, function() Settings.Fly = not Settings.Fly return Settings.Fly end)
-    Toggle("NOCLIP", Tabs.Movement, Settings.Noclip, function() Settings.Noclip = not Settings.Noclip return Settings.Noclip end)
+    -- Movement
+    Toggle("FLY", Tabs.Movement, "Fly")
+    Toggle("NOCLIP", Tabs.Movement, "Noclip")
 
-    -- Сворачивание на клавишу (Insert)
+    -- Farm
+    Toggle("AUTO COLLECT COINS", Tabs.Farm, "AutoCollect")
+    Toggle("AUTO GRAB GUN", Tabs.Farm, "AutoGrab")
+
     UIS.InputBegan:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.Insert then
-            MainFrame.Visible = not MainFrame.Visible
-        end
+        if input.KeyCode == Enum.KeyCode.Insert then MainFrame.Visible = not MainFrame.Visible end
     end)
-    
-    Notify("FONDI MM2", "Press Insert to hide GUI", Color3.new(1,1,1))
+    Notify("FONDI MM2 V3", "Press Insert to hide GUI", Color3.new(1,1,1))
 end
 
 --==================================================
@@ -350,24 +399,13 @@ else
     main.Position = UDim2.new(0.5, -150, 0.4, 0)
     main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     Instance.new("UICorner", main)
-    
     local box = Instance.new("TextBox", main)
-    box.Size = UDim2.new(0.8, 0, 0, 40)
-    box.Position = UDim2.new(0.1, 0, 0.4, 0)
-    box.PlaceholderText = "ENTER KEY"
-    box.Text = ""
-    box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    box.TextColor3 = Color3.new(1,1,1)
+    box.Size = UDim2.new(0.8, 0, 0, 40); box.Position = UDim2.new(0.1, 0, 0.4, 0)
+    box.PlaceholderText = "ENTER KEY"; box.Text = ""
+    box.BackgroundColor3 = Color3.fromRGB(40, 40, 40); box.TextColor3 = Color3.new(1,1,1)
     Instance.new("UICorner", box)
-
     box.FocusLost:Connect(function()
-        if box.Text == KEY then
-            SaveKey()
-            g:Destroy()
-            CreateModernGUI()
-        else
-            box.Text = ""
-            box.PlaceholderText = "WRONG KEY"
-        end
+        if box.Text == KEY then SaveKey(); g:Destroy(); CreateModernGUI()
+        else box.Text = ""; box.PlaceholderText = "WRONG KEY" end
     end)
 end
