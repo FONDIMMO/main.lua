@@ -2,8 +2,6 @@
     FONDI MM2 V3.6 // ULTIMATE EDITION
     - FIX: ESP (Chams) now works 100%
     - FIX: Fly & Noclip (Smooth & Stable)
-    - ADD: Xeno Static Image (11318961749)
-    - KEY: FONDI-MM2-FOREVER
 ]]
 
 local Players = game:GetService("Players")
