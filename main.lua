@@ -35,7 +35,7 @@ task.spawn(function()
     }
     
     print("------------------------------------------")
-    print("[FONDI_LOADER]: Инициализация скрипта...")
+    print("[FONDI_LOADER]: Loading Script...")
     print("------------------------------------------")
     
     local i = 1
@@ -203,7 +203,7 @@ local function BuildUI()
     CreateToggle("BOX ESP + TRACERS", "ESP")
     CreateToggle("GHOST FLY (V)", "Fly")
     CreateToggle("NOCLIP (WALLS)", "Noclip")
-    print("[FONDI_UI]: Меню загружено успешно.")
+    print("[FONDI_UI]: Menu loading Succesful.")
 end
 
 local keyGui = Instance.new("ScreenGui", pg)
